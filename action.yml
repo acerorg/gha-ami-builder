@@ -1,37 +1,143 @@
-name: 'Waiter'
-description: 'Waiting for the command to become expected response within a max attempt loop'
+name: 'AMI Builder'
+description: 'Build an Amazon Machine Image'
 
 inputs:
-  delay:
-    description: 'Delay in seconds (sleep time)'
-    default: '1'
-    required: True
-  max_attempts:
-    description: 'Max attempts for the waiting loop'
-    default: '2'
-    required: True
-  expected_result:
-    description: 'Expected result for the waiter'
-    required: True
-  checker_cmd:
-    description: 'The command to check for status result'
-    required: True
+  AWS_ACCOUNT:
+    description: 'AWS_ACCOUNT'
+    required: true
+    default: '840195720915'
+  AWS_REGION:
+    description: 'AWS_REGION'
+    required: true
+    default: 'ap-southeast-2'
+  AWS_ACCESS_KEY_ID:
+    description: 'AWS_ACCESS_KEY_ID'
+    required: true
+  AWS_SECRET_ACCESS_KEY:
+    description: 'AWS_SECRET_ACCESS_KEY'
+    required: true
+  AMI_ID:
+    description: 'AMI_ID'
+    required: true
+  BILLING_ID:
+    description: 'BILLING_ID'
+    required: true
+  EC2_NAME:
+    description: 'EC2_NAME'
+    required: true
+  VPC_ID:
+    description: 'VPC_ID'
+    required: true
+  SUBNET_ID:
+    description: 'SUBNET_ID'
+    required: true
+  SECURITY_GROUP_ID:
+    description: 'SECURITY_GROUP_ID'
+    required: true
+  KEY_PAIR:
+    description: 'KEY_PAIR'
+    required: true
+    default: 'ACERAutomateAWS'
+  EC2_INSTANCE_PROFILE:
+    description: 'EC2_INSTANCE_PROFILE'
+    required: true
+  INSTANCE_TYPE:
+    description: 'INSTANCE_TYPE'
+    required: true
+    default: 't3.nano'
+  INSTANCE_DISK_SIZE:
+    description: 'INSTANCE_DISK_SIZE'
+    required: true
+    default: '8'
+  USERDATA_FILE:
+    description: 'USERDATA_FILE'
+    required: true
+  PRIVATE_IP_ADDRESS:
+    description: 'INSTANCE_DISK_SIZE'
+    required: false
+
+outputs:
+  EC2_ID:
+    description: 'EC2_ID'
+    value: ${{ steps.boot-ec2.outputs.EC2_ID }}
 
 runs:
   using: "composite"
   steps:
-    - name: Wait
-      shell: bash
-      run: |
-          ready=0
-          for i in {1..${{ inputs.max_attempts }}}; do
-            echo -n "Checking ${i} of ${{ inputs.max_attempts }}... => "
-            result="$(${{ inputs.checker_cmd }})"
-            echo -n "Expecting: \"${{ inputs.expected_result }}\", Currently: \"${result}\"... "
-            if [[ "${result}" != "${{ inputs.expected_result }}" ]]; then
-              echo "Wait ${{ inputs.delay }} more second(s)..."; sleep ${{ inputs.delay }};
-            else
-              ready=1; break;
-            fi
-          done
-          [[ "${ready}" == "0" ]] && echo "Waiter timeout." && exit 1 || echo "Ready."
+  
+  - name: Select Python version
+    run: pyenv local 3.9
+    shell: bash
+
+  - name: Boot Ec2 instance (with userdata that will checkout this repo)
+    id: boot-ec2
+    shell: python
+    run: |
+      import boto3
+      import os
+
+      tags = [
+        {'Key': 'Name', 'Value': '${{ inputs.EC2_NAME }}'},
+        {'Key': 'BillingID', 'Value': '${{ inputs.BILLING_ID }}'},
+        {'Key': 'RepoName', 'Value': '${{ github.repository }}'},
+        {'Key': 'CreatedBy', 'Value': '${{ github.repositoryUrl }}@${{ github.sha }}'},
+      ]
+
+      tag_spec = [
+        {'ResourceType': 'instance', 'Tags': tags},
+        {'ResourceType': 'volume', 'Tags': tags},
+        {'ResourceType': 'network-interface', 'Tags': tags},
+      ]
+
+      block_device_mappings = [{
+        'DeviceName': '/dev/xvda',
+        'Ebs': {
+          'DeleteOnTermination': True,
+          'VolumeSize': int(${{ inputs.INSTANCE_DISK_SIZE }}),
+          'VolumeType': 'gp3',
+          'Encrypted': True,
+        },
+      },]
+
+      user_data = f'''#!/bin/env bash
+      set -ex
+      gh_version=2.20.2
+      curl "https://github.com/cli/cli/releases/download/v${{gh_version}}/gh_${{gh_version}}_linux_amd64.tar.gz" -o /tmp/gh_${{gh_version}}_linux_amd64.tar.gz
+      tar xzf /tmp/gh_${{gh_version}}_linux_amd64.tar.gz -C /tmp
+      export HOME=/root
+      pushd /tmp/gh_${{gh_version}}_linux_amd64/bin
+      ./gh config set git_protocol https
+      ./gh config set prompt disabled
+      aws --region ap-southeast-2 ssm get-parameter --with-decryption --name "/GitHub/DevOps-ACER/pat" --query 'Parameter.Value' --output text \
+      | ./gh auth login --hostname github.com --with-token
+      ./gh auth setup-git
+      ./gh repo clone "${{ github.repository }}" "/root/userdata_repo" -- --branch "${{ github.ref_name }}"
+      ./gh auth logout --hostname github.com
+      bash "/root/userdata_repo/${{ inputs.USERDATA_FILE }}" ${{ inputs.USERDATA_PARAMETERS }} \
+      || echo "Got Error from run.sh, but continue..." \
+      && sleep 5;
+      shutdown -h now
+      '''
+
+      # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.run_instances
+      response = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}').run_instances(
+        BlockDeviceMappings=block_device_mappings,
+        ImageId='${{ inputs.AMI_ID }}',
+        InstanceType="${{ inputs.INSTANCE_TYPE }}",
+        KeyName="${{ inputs.KEY_PAIR }}",
+        MaxCount=1,
+        MinCount=1,
+        Monitoring={'Enabled': False},
+        SecurityGroupIds=['${{ inputs.SECURITY_GROUP_ID }}'],
+        SubnetId="${{ inputs.SUBNET_ID }}",
+        UserData=user_data,
+        EbsOptimized=True,
+        IamInstanceProfile={'Name': '${{ inputs.EC2_INSTANCE_PROFILE }}'},
+        InstanceInitiatedShutdownBehavior='stop',
+        PrivateIpAddress="${{ inputs.PRIVATE_IP_ADDRESS }}" if '${{ inputs.PRIVATE_IP_ADDRESS }}' != '' else None,
+        TagSpecifications=tag_spec,
+      )
+
+      ec2_instance_id = response['Instances'][0]['InstanceId']
+      with open("${{ github.output }}", 'a') as f:
+        f.write(f'EC2_ID={ec2_instance_id}\n')
