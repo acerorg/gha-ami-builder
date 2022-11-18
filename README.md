@@ -10,6 +10,7 @@
     AWS_REGION: ap-southeast-2
     AWS_ACCESS_KEY_ID: XXXXXXXXXXXXXXXXXXXX
     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    AMI_ID: xxxxxxxxxxxxx
     BILLING_ID: MY_BILLING_ID
     EC2_NAME: PROJECT_NAME/REPO_NAME/AMI-Builder
     VPC_ID: vpc-00000000
@@ -19,4 +20,6 @@
     EC2_INSTANCE_PROFILE: Atmosphere-UAT2-App-BuildAmiLaunchTemplateProfileDE4DF5E1-2Y0LEDVtyhEh
     INSTANCE_TYPE: t3.medium
     INSTANCE_DISK_SIZE: 30
+    USERDATA_FILE: ./path/to/userdata.sh
+    USERDATA_PARAMETERS: '"x" "y" "z"'
 ```

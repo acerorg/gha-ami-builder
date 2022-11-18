@@ -60,6 +60,9 @@ outputs:
   EC2_ID:
     description: 'EC2_ID'
     value: ${{ steps.boot-ec2.outputs.EC2_ID }}
+  AMI_ID:
+    description: 'AMI_ID'
+    value: ${{ steps.create-ami.outputs.AMI_ID }}
 
 runs:
   using: "composite"
@@ -68,6 +71,8 @@ runs:
   - name: Select Python version
     run: pyenv local 3.9
     shell: bash
+
+  - uses: actions/checkout@v3
 
   - name: Boot Ec2 instance (with userdata that will checkout this repo)
     id: boot-ec2
@@ -141,3 +146,58 @@ runs:
       ec2_instance_id = response['Instances'][0]['InstanceId']
       with open("${{ github.output }}", 'a') as f:
         f.write(f'EC2_ID={ec2_instance_id}\n')
+
+  - name: Wait for EC2 (${{ steps.boot-ec2.outputs.EC2_ID }}) become running state
+    shell: python
+    run: |
+      import boto3
+      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      ec2_client.get_waiter('instance_running').wait(
+        InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
+        WaiterConfig={'Delay': 2, 'MaxAttempts': 90}
+      )
+
+  - name: Wait for EC2 (${{ steps.boot-ec2.outputs.EC2_ID }}) become stopped state
+    shell: python
+    run: |
+      import boto3
+      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      ec2_client.get_waiter('instance_stopped').wait(
+        InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
+        WaiterConfig={'Delay': 60, 'MaxAttempts': 180}
+      )
+
+  - name: Build AMI from the stopped EC2 instance (${{ steps.boot-ec2.outputs.EC2_ID }})
+    shell: python
+    id: create-ami
+    run: print('build-ami')
+
+  - name: Get volume snapshot id from AMI ID ()
+    shell: python
+    id: get-snapshot
+    run: print('snapshot-id')
+
+  - name: Wait for volume snapshot () become 100% ready
+    shell: python
+    run: print('snapshot-id')
+
+  - name: Wait for image () state become 'available'
+    shell: python
+    run: print('snapshot-id')
+
+  - name: Terminate EC2 Instance (${{ steps.boot-ec2.outputs.EC2_ID }})
+    shell: python
+    run: |
+      impoty boto3
+      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      ec2_client.terminate_instances(InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'])
+
+  - name: Wait for EC2 (${{ steps.boot-ec2.outputs.EC2_ID }}) become terminated state
+    shell: python
+    run: |
+      import boto3
+      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      ec2_client.get_waiter('instance_terminated').wait(
+        InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
+        WaiterConfig={'Delay': 2, 'MaxAttempts': 90}
+      )
