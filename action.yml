@@ -5,11 +5,9 @@ inputs:
   AWS_ACCOUNT:
     description: 'AWS_ACCOUNT'
     required: true
-    default: '840195720915'
   AWS_REGION:
     description: 'AWS_REGION'
     required: true
-    default: 'ap-southeast-2'
   AWS_ACCESS_KEY_ID:
     description: 'AWS_ACCESS_KEY_ID'
     required: true
@@ -37,7 +35,6 @@ inputs:
   KEY_PAIR:
     description: 'KEY_PAIR'
     required: true
-    default: 'ACERAutomateAWS'
   EC2_INSTANCE_PROFILE:
     description: 'EC2_INSTANCE_PROFILE'
     required: true
@@ -52,6 +49,9 @@ inputs:
   USERDATA_FILE:
     description: 'USERDATA_FILE'
     required: true
+  USERDATA_PARAMETERS:
+    description: 'USERDATA_PARAMETERS'
+    required: false
   PRIVATE_IP_ADDRESS:
     description: 'INSTANCE_DISK_SIZE'
     required: false
