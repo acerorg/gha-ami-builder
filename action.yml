@@ -96,7 +96,7 @@ runs:
 
       user_data = f'''#!/bin/env bash
       set -ex
-      curl "https://github.com/cli/cli/releases/download/v${{env.gh_version}}/gh_${{env.gh_version}}_linux_amd64.tar.gz" \
+      curl -L "https://github.com/cli/cli/releases/download/v${{env.gh_version}}/gh_${{env.gh_version}}_linux_amd64.tar.gz" \
             -o /tmp/gh_${{env.gh_version}}_linux_amd64.tar.gz
       tar xzf /tmp/gh_${{env.gh_version}}_linux_amd64.tar.gz -C /tmp
       export HOME=/root
