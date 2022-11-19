@@ -96,11 +96,11 @@ runs:
 
       user_data = f'''#!/bin/env bash
       set -ex
-      curl "https://github.com/cli/cli/releases/download/v${{gh_version}}/gh_${{gh_version}}_linux_amd64.tar.gz" \
-            -o /tmp/gh_${{gh_version}}_linux_amd64.tar.gz
-      tar xzf /tmp/gh_${{gh_version}}_linux_amd64.tar.gz -C /tmp
+      curl "https://github.com/cli/cli/releases/download/v${{env.gh_version}}/gh_${{env.gh_version}}_linux_amd64.tar.gz" \
+            -o /tmp/gh_${{env.gh_version}}_linux_amd64.tar.gz
+      tar xzf /tmp/gh_${{env.gh_version}}_linux_amd64.tar.gz -C /tmp
       export HOME=/root
-      pushd /tmp/gh_${{gh_version}}_linux_amd64/bin
+      pushd /tmp/gh_${{env.gh_version}}_linux_amd64/bin
       ./gh config set git_protocol https
       ./gh config set prompt disabled
       aws --region ap-southeast-2 ssm get-parameter --with-decryption --name "/GitHub/DevOps-ACER/pat" --query 'Parameter.Value' --output text \
