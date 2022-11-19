@@ -113,7 +113,7 @@ runs:
       '''
 
       # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.run_instances
-      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      region = os.environ.get('AWS_REGION', '')
       ec2_client = boto3.client('ec2', region_name=region)
       response = ec2_client.run_instances(
         BlockDeviceMappings=block_device_mappings,
@@ -142,7 +142,7 @@ runs:
     run: |
       import boto3
       import os
-      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      region = os.environ.get('AWS_REGION', '')
       ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.get_waiter('instance_running').wait(
         InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
@@ -154,7 +154,7 @@ runs:
     run: |
       import boto3
       import os
-      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      region = os.environ.get('AWS_REGION', '')
       ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.get_waiter('instance_stopped').wait(
         InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
@@ -184,7 +184,7 @@ runs:
     run: |
       impoty boto3
       import os
-      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      region = os.environ.get('AWS_REGION', '')
       ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.terminate_instances(InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'])
 
@@ -193,7 +193,7 @@ runs:
     run: |
       import boto3
       import os
-      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      region = os.environ.get('AWS_REGION', '')
       ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.get_waiter('instance_terminated').wait(
         InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
