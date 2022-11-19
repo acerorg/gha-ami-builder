@@ -131,7 +131,7 @@ runs:
         EbsOptimized=True,
         IamInstanceProfile={'Name': '${{ inputs.EC2_INSTANCE_PROFILE }}'},
         InstanceInitiatedShutdownBehavior='stop',
-        PrivateIpAddress="${{ inputs.PRIVATE_IP_ADDRESS }}" if '${{ inputs.PRIVATE_IP_ADDRESS }}' != '' else None,
+        # PrivateIpAddress="${{ inputs.PRIVATE_IP_ADDRESS }}" if '${{ inputs.PRIVATE_IP_ADDRESS }}' != '' else None,
         TagSpecifications=tag_spec,
       )
 
