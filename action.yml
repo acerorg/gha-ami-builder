@@ -2,18 +2,6 @@ name: 'AMI Builder'
 description: 'Build an Amazon Machine Image'
 
 inputs:
-  AWS_ACCOUNT:
-    description: 'AWS_ACCOUNT'
-    required: true
-  AWS_REGION:
-    description: 'AWS_REGION'
-    required: true
-  AWS_ACCESS_KEY_ID:
-    description: 'AWS_ACCESS_KEY_ID'
-    required: true
-  AWS_SECRET_ACCESS_KEY:
-    description: 'AWS_SECRET_ACCESS_KEY'
-    required: true
   AMI_ID:
     description: 'AMI_ID'
     required: true
@@ -125,7 +113,9 @@ runs:
       '''
 
       # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.run_instances
-      response = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}').run_instances(
+      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      ec2_client = boto3.client('ec2', region_name=region)
+      response = ec2_client.run_instances(
         BlockDeviceMappings=block_device_mappings,
         ImageId='${{ inputs.AMI_ID }}',
         InstanceType="${{ inputs.INSTANCE_TYPE }}",
@@ -151,7 +141,9 @@ runs:
     shell: python
     run: |
       import boto3
-      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      import os
+      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.get_waiter('instance_running').wait(
         InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
         WaiterConfig={'Delay': 2, 'MaxAttempts': 90}
@@ -161,7 +153,9 @@ runs:
     shell: python
     run: |
       import boto3
-      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      import os
+      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.get_waiter('instance_stopped').wait(
         InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
         WaiterConfig={'Delay': 60, 'MaxAttempts': 180}
@@ -189,14 +183,18 @@ runs:
     shell: python
     run: |
       impoty boto3
-      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      import os
+      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.terminate_instances(InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'])
 
   - name: Wait for EC2 (${{ steps.boot-ec2.outputs.EC2_ID }}) become terminated state
     shell: python
     run: |
       import boto3
-      ec2_client = boto3.client('ec2', region_name='${{ inputs.AWS_REGION }}')
+      import os
+      region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+      ec2_client = boto3.client('ec2', region_name=region)
       ec2_client.get_waiter('instance_terminated').wait(
         InstanceIds=['${{ steps.boot-ec2.outputs.EC2_ID }}'],
         WaiterConfig={'Delay': 2, 'MaxAttempts': 90}
